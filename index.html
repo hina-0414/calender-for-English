@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #fffaf0; padding: 20px; font-family: 'Helvetica Neue', Arial, sans-serif; color: #5d4037; }
+    .hidden { display: none !important; }
+    
+    #loginSection {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+      border: none;
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(255, 154, 158, 0.3);
+    }
+    #loginSection::before {
+      content: "☀️";
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 2.5rem;
+      opacity: 0.8;
+    }
+    #loginSection::after {
+      content: "🌸 🌼 🌷 🌻 🌸";
+      position: absolute;
+      bottom: 5px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 1.2rem;
+      letter-spacing: 5px;
+      opacity: 0.9;
+    }
+    .login-title {
+      color: #ffffff;
+      font-weight: bold;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+    }
+    .btn-warm {
+      background-color: #ff6f61;
+      border-color: #ff6f61;
+      color: white;
+      font-weight: bold;
+      border-radius: 30px;
+    }
+    .btn-warm:hover {
+      background-color: #ff8e84;
+      color: white;
+    }
+
+    .calendar-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    #roomStatus { font-weight: bold; text-align: center; border-radius: 50px; }
+    .modal-overlay { 
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; 
+    }
+    .calendar-container { position: relative; padding-bottom: 75%; height: 0; overflow: hidden; }
+    .calendar-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+    .delete-item { cursor: pointer; border-bottom: 1px solid #eee; padding: 12px; transition: background 0.2s; font-size: 1rem; }
+    .delete-item:hover { background: #fff5f5; }
+    
+    .text-teacher { color: #d84315; font-weight: bold; } 
+    .text-student { color: #2e7d32; font-weight: bold; } 
+    .badge-class { background-color: #ffa000; color: #fff; font-size: 0.75rem; margin-right: 5px; } 
+  </style>
+</head>
+<body>
+
+  <div class="container" style="max-width: 900px;">
+    <div class="text-center mb-4">
+      <h2 class="fw-bold" style="color: #ef6c00;">英語科資料室予約</h2>
+      <div id="roomStatus" class="alert alert-secondary d-inline-block px-5 shadow-sm">空き状況確認中...</div>
+    </div>
+
+    <div id="loginSection" class="card p-5 mb-4 mx-auto" style="max-width: 420px;">
+      <h4 class="text-center mb-4 login-title">Welcome</h4>
+      <div class="mb-3">
+        <select id="role" class="form-select border-0 shadow-sm">
+          <option value="学生">学生の方</option>
+          <option value="先生">先生の方</option>
+        </select>
+      </div>
+      <div class="mb-3"><input type="text" id="userId" class="form-control border-0 shadow-sm" placeholder="IDをご入力ください"></div>
+      <div class="mb-4"><input type="password" id="userPw" class="form-control border-0 shadow-sm" placeholder="パスワードをご入力ください"></div>
+      <button class="btn btn-warm w-100 py-2 shadow" onclick="handleLogin()">ログインして進む</button>
+      <div style="height: 25px;"></div>
+    </div>
+
+    <div id="mainSection" class="hidden">
+      <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <h5 id="welcomeMsg" class="mb-0 fw-bold" style="color: #bf360c;"></h5>
+        <button class="btn btn-outline-secondary btn-sm rounded-pill" onclick="location.reload()">ログアウト</button>
+      </div>
+
+      <div id="teacherMenu" class="alert alert-warning hidden mb-4 shadow-sm border-0" style="background-color: #fff3e0;">
+        <h6 class="fw-bold" style="color: #e65100;">【先生用】固定授業の一括登録・削除</h6>
+        <div class="row g-2">
+          <div class="col-md-3">
+            <select id="term" class="form-select form-select-sm"><option>前期</option><option>後期</option></select>
+          </div>
+          <div class="col-md-3">
+            <select id="dayOfWeek" class="form-select form-select-sm">
+              <option value="1">月曜日</option><option value="2">火曜日</option>
+              <option value="3">水曜日</option><option value="4">木曜日</option><option value="5">金曜日</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <select id="period" class="form-select form-select-sm">
+              <option value="1">1限(08:50~)</option><option value="2">2限(10:30~)</option>
+              <option value="3">3限(13:10~)</option><option value="4">4限(14:50~)</option>
+              <option value="5">5限(16:30~)</option>
+            </select>
+          </div>
+          <div class="col-md-3"><input type="text" id="className" class="form-control form-select-sm" placeholder="授業名"></div>
+        </div>
+        <button class="btn btn-sm mt-2 w-100 shadow-sm" style="background-color: #fb8c00; color: white;" onclick="bulkRegister()">一括登録を実行</button>
+        <button class="btn btn-sm mt-2 w-100 shadow-sm" style="background-color: #e53935; color: white;" onclick="showBulkDeleteModal()">登録済みの「授業」を授業ごとに一括削除</button>
+      </div>
+
+      <div class="d-flex gap-2 mb-4">
+        <button class="btn btn-primary px-4 shadow rounded-pill" style="background-color: #0288d1;" onclick="showModal()">新規予約 (日付指定)</button>
+        <button class="btn btn-danger px-4 shadow rounded-pill" style="background-color: #d32f2f;" onclick="showDeleteModal()">自分の予約を取消</button>
+      </div>
+
+      <div class="calendar-card">
+        <h5 class="fw-bold border-start border-warning border-4 ps-2 mb-3" style="color: #5d4037;">現在の予約状況</h5>
+        <div class="calendar-container">
+          <iframe id="calendarIframe" src="https://calendar.google.com/calendar/embed?src=1f92d6ad5d14992609bd132d3fb14337e04b9d566ce8cc31c7d2c8d84e85f1d2%40group.calendar.google.com&ctz=Asia%2FTokyo&mode=MONTH&hl=ja&showTitle=0&showNav=1&showPrint=0&showTabs=1&showCalendars=0&showTz=0" style="border: 0" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reserveModal" class="modal-overlay" onclick="closeModal()">
+    <div class="card p-4 shadow-lg border-0" style="width: 90%; max-width: 400px; border-radius: 15px;" onclick="event.stopPropagation()">
+      <h5 class="mb-3 fw-bold" style="color: #ef6c00;">新規予約登録</h5>
+      <div class="mb-2">
+        <label class="small">日付</label>
+        <input type="date" id="resDate" class="form-control">
+      </div>
+      <div class="mb-2">
+        <label class="small">開始時間</label>
+        <div class="d-flex gap-1"><select id="startH" class="form-select"></select><span>:</span><select id="startM" class="form-select"></select></div>
+      </div>
+      <div class="mb-2">
+        <label class="small">終了時間</label>
+        <div class="d-flex gap-1"><select id="endH" class="form-select"></select><span>:</span><select id="endM" class="form-select"></select></div>
+      </div>
+      <div class="mb-3"><label class="small">用途</label><input type="text" id="resNote" class="form-control" placeholder="例：自主学習"></div>
+      <div class="d-flex gap-2">
+        <button class="btn btn-primary flex-grow-1 rounded-pill" onclick="submitReserve()">予約確定</button>
+        <button class="btn btn-light rounded-pill" onclick="closeModal()">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="modal-overlay" onclick="closeDeleteModal()">
+    <div class="card p-4 shadow-lg border-0" style="width: 90%; max-width: 500px; border-radius: 15px;" onclick="event.stopPropagation()">
+      <h5 class="mb-3 fw-bold text-danger">予約を取り消す</h5>
+      <div id="myResList" style="max-height: 350px; overflow-y: auto; border: 1px solid #ffebee; border-radius: 8px; background: #fff;"></div>
+      <button class="btn btn-light w-100 mt-3 rounded-pill" onclick="closeDeleteModal()">閉じる</button>
+    </div>
+  </div>
+
+  <div id="bulkDeleteModal" class="modal-overlay" onclick="closeBulkDeleteModal()">
+    <div class="card p-4 shadow-lg border-0" style="width: 90%; max-width: 500px; border-radius: 15px;" onclick="event.stopPropagation()">
+      <h5 class="mb-3 fw-bold text-danger">授業を一括削除</h5>
+      <p class="small text-muted">一括登録された授業を項目ごとに削除します。</p>
+      <div id="classGroupList" style="max-height: 350px; overflow-y: auto; border: 1px solid #ffebee; border-radius: 8px; background: #fff;"></div>
+      <button class="btn btn-light w-100 mt-3 rounded-pill" onclick="closeBulkDeleteModal()">閉じる</button>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    function initTimeSelectors() {
+      const sh = document.getElementById('startH'); const eh = document.getElementById('endH');
+      const sm = document.getElementById('startM'); const em = document.getElementById('endM');
+      for(let i=0; i<24; i++) { let h = String(i).padStart(2, '0'); sh.add(new Option(h, h)); eh.add(new Option(h, h)); }
+      for(let i=0; i<60; i+=5) { let m = String(i).padStart(2, '0'); sm.add(new Option(m, m)); em.add(new Option(m, m)); }
+    }
+
+    window.onload = () => {
+      initTimeSelectors();
+      google.script.run.withSuccessHandler(status => {
+        const el = document.getElementById('roomStatus');
+        el.innerText = status ? "● 現在使用中" : "● 只今空いています";
+        el.className = status ? "alert alert-danger d-inline-block px-5 shadow-sm" : "alert alert-success d-inline-block px-5 shadow-sm";
+      }).isRoomBusy();
+    };
+
+    function handleLogin() {
+      const id = document.getElementById('userId').value;
+      const pw = document.getElementById('userPw').value;
+      const role = document.getElementById('role').value;
+      if(!id || !pw) return alert("IDとパスワードを入力してください");
+      google.script.run.withSuccessHandler(res => {
+        if(res.success) {
+          currentUser = { id, name: res.name, role: res.role };
+          document.getElementById('loginSection').classList.add('hidden');
+          document.getElementById('mainSection').classList.remove('hidden');
+          document.getElementById('welcomeMsg').innerText = "こんにちは、" + res.name + " さん";
+          if(res.role === "先生") document.getElementById('teacherMenu').classList.remove('hidden');
+          
+          // 授業による予約取り消しメッセージがあれば表示
+          if(res.conflictMessage) {
+            alert(res.conflictMessage);
+          }
+        } else { alert("認証に失敗しました。"); }
+      }).login(id, pw, role);
+    }
+
+    function refreshCalendar(mode) {
+      const iframe = document.getElementById('calendarIframe');
+      let url = iframe.src;
+      if (mode) { url = url.replace(/mode=[A-Z]+/, "mode=" + mode); }
+      iframe.src = url;
+    }
+
+    function showModal() { 
+      const now = new Date();
+      const jstDate = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+      const today = jstDate.toISOString().split('T')[0];
+      const dateInput = document.getElementById('resDate');
+      dateInput.value = today; dateInput.min = today;
+      const roundedM = Math.ceil(now.getMinutes() / 5) * 5;
+      let h = now.getHours(); let m = roundedM; if(m >= 60) { h++; m = 0; }
+      document.getElementById('startH').value = String(h).padStart(2, '0');
+      document.getElementById('startM').value = String(m).padStart(2, '0');
+      document.getElementById('endH').value = String(h + 1).padStart(2, '0');
+      document.getElementById('endM').value = String(m).padStart(2, '0');
+      document.getElementById('reserveModal').style.display = 'flex'; 
+    }
+    function closeModal() { document.getElementById('reserveModal').style.display = 'none'; }
+
+    function showDeleteModal() {
+      const listDiv = document.getElementById('myResList');
+      listDiv.innerHTML = "<div class='p-3 text-center'>読み込み中...</div>";
+      document.getElementById('deleteModal').style.display = 'flex';
+      google.script.run.withSuccessHandler(resList => {
+        if(!resList || resList.length === 0) { listDiv.innerHTML = "<div class='p-4 text-center text-muted'>取消可能な予約はありません。</div>"; return; }
+        listDiv.innerHTML = "";
+        resList.forEach(item => {
+          const div = document.createElement('div');
+          div.className = "delete-item d-flex align-items-center";
+          const colorClass = item.role === "先生" ? "text-teacher" : "text-student";
+          const label = item.type === "授業" ? '<span class="badge badge-class">授業</span>' : '';
+          div.innerHTML = `<span class="${colorClass}">${label}${item.date} ${item.start}～${item.end}</span>`;
+          div.onclick = () => { if(confirm(`${item.date} ${item.start}～ の予約を取り消しますか？`)) executeDelete(item.date, item.start); };
+          listDiv.appendChild(div);
+        });
+      }).getMyReservations(currentUser.id);
+    }
+    function closeDeleteModal() { document.getElementById('deleteModal').style.display = 'none'; }
+
+    function showBulkDeleteModal() {
+      const listDiv = document.getElementById('classGroupList');
+      listDiv.innerHTML = "<div class='p-3 text-center'>授業リストを取得中...</div>";
+      document.getElementById('bulkDeleteModal').style.display = 'flex';
+      google.script.run.withSuccessHandler(groups => {
+        if(!groups || groups.length === 0) { listDiv.innerHTML = "<div class='p-4 text-center text-muted'>登録済みの授業はありません。</div>"; return; }
+        listDiv.innerHTML = "";
+        groups.forEach(g => {
+          const div = document.createElement('div');
+          div.className = "delete-item";
+          div.innerHTML = `
+            <div class="fw-bold text-teacher" style="font-size:1.1rem;">【${g.name}】</div>
+            <div class="mt-1" style="color:#666;">
+              <span class="badge bg-secondary me-1">${g.day}</span>
+              <span>${g.start}〜 開始（全 ${g.count} 回分）</span>
+            </div>
+          `;
+          div.onclick = () => { if(confirm(`「${g.name}」の全日程を一括削除しますか？`)) executeBulkDelete(g.name, g.start); };
+          listDiv.appendChild(div);
+        });
+      }).getMyClassGroups(currentUser.id);
+    }
+    function closeBulkDeleteModal() { document.getElementById('bulkDeleteModal').style.display = 'none'; }
+
+    function executeDelete(date, start) {
+      google.script.run.withSuccessHandler(msg => { alert(msg); closeDeleteModal(); refreshCalendar(); }).deleteReservation(currentUser.id, date, start);
+    }
+
+    function executeBulkDelete(className, startTime) {
+      google.script.run.withSuccessHandler(msg => { alert(msg); closeBulkDeleteModal(); refreshCalendar(); }).deleteClassGroup(currentUser.id, className, startTime);
+    }
+
+    function submitReserve() {
+      const startTime = document.getElementById('startH').value + ":" + document.getElementById('startM').value;
+      const endTime = document.getElementById('endH').value + ":" + document.getElementById('endM').value;
+      const res = { id: currentUser.id, name: currentUser.name, date: document.getElementById('resDate').value, start: startTime, end: endTime, note: document.getElementById('resNote').value };
+      if (new Date(res.date + "T" + res.start) < new Date()) { alert("過去の時刻は予約できません"); return; }
+      google.script.run.withFailureHandler(err => alert(err.message)).withSuccessHandler(msg => { alert(msg); closeModal(); refreshCalendar('MONTH'); }).addReservation(res);
+    }
+
+    function bulkRegister() {
+      const res = { id: currentUser.id, name: currentUser.name, term: document.getElementById('term').value, dayOfWeek: document.getElementById('dayOfWeek').value, period: document.getElementById('period').value, note: document.getElementById('className').value };
+      if(!res.note) return alert("授業名を入力してください");
+      google.script.run.withFailureHandler(err => alert(err.message)).withSuccessHandler(msg => { alert(msg); refreshCalendar('MONTH'); }).registerClass(res);
+    }
+  </script>
+</body>
+</html>
